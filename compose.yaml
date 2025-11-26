@@ -1,0 +1,33 @@
+services:
+  api:
+    image: meow-ai-api:latest
+    container_name: meow-ai-api
+    build:
+      context: .
+      target: api-runtime
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    networks:
+      - app
+    expose:
+      - "8080"
+
+  web:
+    image: meow-ai-web:latest
+    container_name: meow-ai-web
+    build:
+      context: .
+      target: web-runtime
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+

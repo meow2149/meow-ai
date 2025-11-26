@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+
+api:
+  url: wss://openspeech.bytedance.com/api/v3/realtime/dialogue
+  app_id: 4363617129
+  app_key: PlgvMymc7f3tQnJ6
+  resource_id: volc.speech.dialog
+  access_key: rqA8NFo5SN4M5EYUYaDKcc1tMxpNLb6d
+
+session:
+  asr:
+    extra:
+      end_smooth_window_ms: 1500
+  tts:
+    speaker: zh_female_vv_jupiter_bigtts
+    audio_config:
+      channel: 1
+      format: pcm
+      sample_rate: 24000
+  dialog:
+    bot_name: 连连
+    system_role: |
+      你使用活泼灵动的女声，
+      性格开朗，热爱生活。
+      你在与用户对话时保持亲切温暖，
+      并适当加入轻松愉快的语气。
+    speaking_style: 你的说话风格简洁明了，语速适中，语调自然。
+    location:
+      city: 北京
+    extra:
+      strict_audit: false
+      audit_response: 支持客户自定义安全审核回复话术。
+      input_mod: audio
+      model: O
+      recv_timeout: 10
