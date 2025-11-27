@@ -128,7 +128,9 @@ func (h *Handler) readStart(conn *websocket.Conn) (clientStartMessage, error) {
 
 func (h *Handler) pipeFrontend(conn *websocket.Conn, session *voice.Session) error {
 	for {
-		if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		// Reset read deadline for each message
+		// Using a longer timeout to keep connection alive during silence
+		if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
 			return err
 		}
 		mt, data, err := conn.ReadMessage()
@@ -148,6 +150,9 @@ func (h *Handler) pipeFrontend(conn *websocket.Conn, session *voice.Session) err
 			if msg.Type == "stop" {
 				return nil
 			}
+		case websocket.PingMessage, websocket.PongMessage:
+			// Gorilla websocket handles ping/pong automatically, but explicit handling ensures activity
+			continue
 		default:
 			glog.Infof("ignore message type=%d", mt)
 		}
@@ -172,10 +177,6 @@ func (h *Handler) pipeBackend(writer *wsWriter, session *voice.Session) error {
 			if !ok {
 				return session.Err()
 			}
-			// Forward event to frontend
-			// Convert payload to RawMessage to avoid double encoding if it is already JSON bytes
-			// Actually `evt.Payload` is []byte, which will be base64 encoded if we put it in struct directly as []byte
-			// We want it to be a nested JSON object.
 			
 			jsonMsg := map[string]any{
 				"type":     evt.Type,
