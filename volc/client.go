@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"meow-ai/internal/config"
+	"meow-ai/config"
 )
 
 const (

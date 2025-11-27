@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/glog"
 
-	"meow-ai/internal/config"
-	"meow-ai/internal/volc"
+	"meow-ai/config"
+	"meow-ai/volc"
 )
 
 type Session struct {

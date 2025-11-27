@@ -10,8 +10,8 @@ import (
 
 	"github.com/golang/glog"
 
-	"meow-ai/internal/config"
-	"meow-ai/internal/server"
+	"meow-ai/config"
+	"meow-ai/server"
 )
 
 var configPath = flag.String("config", "config.yaml", "配置文件路径")

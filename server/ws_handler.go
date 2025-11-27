@@ -11,8 +11,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 
-	"meow-ai/internal/config"
-	"meow-ai/internal/voice"
+	"meow-ai/config"
+	"meow-ai/voice"
 )
 
 type Handler struct {
