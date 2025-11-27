@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-export type Status = "idle" | "connecting" | "running" | "error"
+type Status = "idle" | "connecting" | "running" | "error"
 
 const WS_PATH = "/ws/realtime"
 const DEFAULT_SAMPLE_RATE = 48000
@@ -12,7 +12,7 @@ const getBackendURL = () => {
 
 const workletURL = new URL("../worklets/pcm-processor.js", import.meta.url)
 
-export const useRealtimeVoice = () => {
+const useRealtimeVoice = () => {
   const [status, setStatus] = useState<Status>("idle")
   const [info, setInfo] = useState("")
 
@@ -169,3 +169,5 @@ export const useRealtimeVoice = () => {
     isRunning: status === "running",
   }
 }
+
+export { useRealtimeVoice, type Status }
