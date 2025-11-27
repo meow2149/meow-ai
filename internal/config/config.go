@@ -34,7 +34,13 @@ type SessionConfig struct {
 }
 
 type ASRConfig struct {
-	Extra map[string]any `yaml:"extra"`
+	Extra ASRExtraConfig `yaml:"extra"`
+}
+
+type ASRExtraConfig struct {
+	EndSmoothWindowMS int  `yaml:"end_smooth_window_ms"`
+	EnableCustomVAD   bool `yaml:"enable_custom_vad"`
+	EnableASRTwoPass  bool `yaml:"enable_asr_twopass"`
 }
 
 type TTSConfig struct {
@@ -49,15 +55,38 @@ type AudioConfig struct {
 }
 
 type DialogConfig struct {
-	BotName       string          `yaml:"bot_name"`
-	SystemRole    string          `yaml:"system_role"`
-	SpeakingStyle string          `yaml:"speaking_style"`
-	Location      *LocationConfig `yaml:"location"`
-	Extra         map[string]any  `yaml:"extra"`
+	DialogID          string          `yaml:"dialog_id"`
+	BotName           string          `yaml:"bot_name"`
+	SystemRole        string          `yaml:"system_role"`
+	SpeakingStyle     string          `yaml:"speaking_style"`
+	CharacterManifest string          `yaml:"character_manifest"`
+	Location          *LocationConfig `yaml:"location"`
+	Extra             DialogExtra     `yaml:"extra"`
+}
+
+type DialogExtra struct {
+	StrictAudit              bool   `yaml:"strict_audit"`
+	AuditResponse            string `yaml:"audit_response"`
+	EnableVolcWebsearch      bool   `yaml:"enable_volc_websearch"`
+	VolcWebsearchType        string `yaml:"volc_websearch_type"`
+	VolcWebsearchAPIKey      string `yaml:"volc_websearch_api_key"`
+	VolcWebsearchResultCount int    `yaml:"volc_websearch_result_count"`
+	VolcWebsearchNoResultMsg string `yaml:"volc_websearch_no_result_message"`
+	InputMod                 string `yaml:"input_mod"`
+	Model                    string `yaml:"model"`
+	RecvTimeout              int    `yaml:"recv_timeout"`
 }
 
 type LocationConfig struct {
-	City string `yaml:"city"`
+	Longitude  float64 `yaml:"longitude"`
+	Latitude   float64 `yaml:"latitude"`
+	City       string  `yaml:"city"`
+	Country    string  `yaml:"country"`
+	Province   string  `yaml:"province"`
+	District   string  `yaml:"district"`
+	Town       string  `yaml:"town"`
+	CountryISO string  `yaml:"country_code"`
+	Address    string  `yaml:"address"`
 }
 
 func Load(path string) (*Config, error) {
@@ -141,9 +170,65 @@ func (s *SessionConfig) Validate() error {
 	if s.Dialog.SystemRole == "" {
 		return fmt.Errorf("session.dialog.system_role is required")
 	}
+	if len([]rune(s.Dialog.BotName)) > 20 {
+		return fmt.Errorf("session.dialog.bot_name cannot exceed 20 characters")
+	}
+	if err := s.ASR.Extra.validate(); err != nil {
+		return err
+	}
+	if err := s.Dialog.validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
+}
+
+func (e *ASRExtraConfig) validate() error {
+	if e.EndSmoothWindowMS == 0 {
+		e.EndSmoothWindowMS = 1500
+	}
+	if e.EndSmoothWindowMS < 500 || e.EndSmoothWindowMS > 50000 {
+		return fmt.Errorf("session.asr.extra.end_smooth_window_ms must be between 500 and 50000")
+	}
+	return nil
+}
+
+func (d *DialogConfig) validate() error {
+	if d.Location != nil {
+		d.Location.setDefaults()
+	}
+	if d.Extra.VolcWebsearchType == "" {
+		d.Extra.VolcWebsearchType = "web_summary"
+	}
+	if d.Extra.VolcWebsearchResultCount == 0 {
+		d.Extra.VolcWebsearchResultCount = 10
+	}
+	if d.Extra.VolcWebsearchResultCount > 10 {
+		return fmt.Errorf("session.dialog.extra.volc_websearch_result_count cannot exceed 10")
+	}
+	if d.Extra.Model == "" {
+		d.Extra.Model = "O"
+	}
+	if d.Extra.RecvTimeout == 0 {
+		d.Extra.RecvTimeout = 10
+	}
+	if d.Extra.RecvTimeout < 10 || d.Extra.RecvTimeout > 120 {
+		return fmt.Errorf("session.dialog.extra.recv_timeout must be between 10 and 120")
+	}
+	if d.Extra.InputMod == "" {
+		d.Extra.InputMod = "audio"
+	}
+	return nil
+}
+
+func (l *LocationConfig) setDefaults() {
+	if l.Country == "" {
+		l.Country = "中国"
+	}
+	if l.CountryISO == "" {
+		l.CountryISO = "CN"
+	}
 }

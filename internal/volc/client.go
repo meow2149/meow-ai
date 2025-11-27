@@ -62,13 +62,13 @@ type AudioConfig struct {
 }
 
 type DialogPayload struct {
-	DialogID      string                 `json:"dialog_id,omitempty"`
-	BotName       string                 `json:"bot_name"`
-	SystemRole    string                 `json:"system_role"`
-	SpeakingStyle string                 `json:"speaking_style"`
-	Character     string                 `json:"character_manifest,omitempty"`
-	Location      *config.LocationConfig `json:"location,omitempty"`
-	Extra         map[string]any         `json:"extra"`
+	DialogID          string                 `json:"dialog_id,omitempty"`
+	BotName           string                 `json:"bot_name"`
+	SystemRole        string                 `json:"system_role"`
+	SpeakingStyle     string                 `json:"speaking_style"`
+	CharacterManifest string                 `json:"character_manifest,omitempty"`
+	Location          *config.LocationConfig `json:"location,omitempty"`
+	Extra             map[string]any         `json:"extra"`
 }
 
 type SayHelloPayload struct {
@@ -160,7 +160,11 @@ func (c *Client) startConnection(ctx context.Context) error {
 func (c *Client) startSession(ctx context.Context) error {
 	payload := StartSessionPayload{
 		ASR: ASRPayload{
-			Extra: c.cfg.Session.ASR.Extra,
+			Extra: map[string]any{
+				"end_smooth_window_ms": c.cfg.Session.ASR.Extra.EndSmoothWindowMS,
+				"enable_custom_vad":    c.cfg.Session.ASR.Extra.EnableCustomVAD,
+				"enable_asr_twopass":   c.cfg.Session.ASR.Extra.EnableASRTwoPass,
+			},
 		},
 		TTS: TTSPayload{
 			Speaker: c.cfg.Session.TTS.Speaker,
@@ -171,11 +175,24 @@ func (c *Client) startSession(ctx context.Context) error {
 			},
 		},
 		Dialog: DialogPayload{
-			BotName:       c.cfg.Session.Dialog.BotName,
-			SystemRole:    c.cfg.Session.Dialog.SystemRole,
-			SpeakingStyle: c.cfg.Session.Dialog.SpeakingStyle,
-			Location:      c.cfg.Session.Dialog.Location,
-			Extra:         c.cfg.Session.Dialog.Extra,
+			DialogID:          c.cfg.Session.Dialog.DialogID,
+			BotName:           c.cfg.Session.Dialog.BotName,
+			SystemRole:        c.cfg.Session.Dialog.SystemRole,
+			SpeakingStyle:     c.cfg.Session.Dialog.SpeakingStyle,
+			CharacterManifest: c.cfg.Session.Dialog.CharacterManifest,
+			Location:          c.cfg.Session.Dialog.Location,
+			Extra: map[string]any{
+				"strict_audit":                     c.cfg.Session.Dialog.Extra.StrictAudit,
+				"audit_response":                   c.cfg.Session.Dialog.Extra.AuditResponse,
+				"enable_volc_websearch":            c.cfg.Session.Dialog.Extra.EnableVolcWebsearch,
+				"volc_websearch_type":              c.cfg.Session.Dialog.Extra.VolcWebsearchType,
+				"volc_websearch_api_key":           c.cfg.Session.Dialog.Extra.VolcWebsearchAPIKey,
+				"volc_websearch_result_count":      c.cfg.Session.Dialog.Extra.VolcWebsearchResultCount,
+				"volc_websearch_no_result_message": c.cfg.Session.Dialog.Extra.VolcWebsearchNoResultMsg,
+				"input_mod":                        c.cfg.Session.Dialog.Extra.InputMod,
+				"model":                            c.cfg.Session.Dialog.Extra.Model,
+				"recv_timeout":                     c.cfg.Session.Dialog.Extra.RecvTimeout,
+			},
 		},
 	}
 	body, err := json.Marshal(payload)

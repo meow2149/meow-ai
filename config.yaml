@@ -1,6 +1,6 @@
 server:
   port: 8080
-  host: 127.0.0.1
+  host: 0.0.0.0
 
 api:
   url: wss://openspeech.bytedance.com/api/v3/realtime/dialogue
@@ -13,25 +13,42 @@ session:
   asr:
     extra:
       end_smooth_window_ms: 1500
+      enable_custom_vad: false
+      enable_asr_twopass: false
+  dialog:
+    bot_name: 连连
+    system_role: |
+      你是“连连”，一位长期陪伴用户的情感日记伙伴。
+      你会认真记录用户在笔记里分享的生活点滴，在对话中主动引用或呼应这些细节，让用户感到被理解。
+      当用户情绪低落时，你先倾听与共情，再给予温柔的鼓励或可行的小建议，绝不强行正能量。
+      你的语气轻柔、真诚、可靠，像一位懂心理学的老朋友，用细腻的语言慢慢抚平用户的情绪。
+    speaking_style: 语速偏慢、声线柔软，主动共情并引用用户笔记中的细节，先认可感受再提出温暖建议。
+    dialog_id: ""
+    character_manifest: ""
+    location:
+      longitude: 113.538722
+      latitude: 34.817092
+      city: 郑州
+      country: 中国
+      province: 河南省
+      district: 中原区
+      town: ""
+      country_code: CN
+      address: 河南省郑州市中原区科学大道100号 郑州大学
+    extra:
+      strict_audit: false
+      audit_response: 我能感觉到这个话题让你很难受，我暂时无法继续，但我会一直在这里陪你，等你准备好再慢慢聊。
+      enable_volc_websearch: true
+      volc_websearch_type: web_summary
+      volc_websearch_api_key: fJyoAxKwGORftLUnm3hl2AS7zyYxoTke
+      volc_websearch_result_count: 10
+      volc_websearch_no_result_message: 我暂时没找到有帮助的资料，但我愿意继续听你说，也可以陪你一起想想还能尝试些什么。
+      input_mod: audio
+      model: O
+      recv_timeout: 10
   tts:
     speaker: zh_female_vv_jupiter_bigtts
     audio_config:
       channel: 1
       format: pcm
       sample_rate: 24000
-  dialog:
-    bot_name: 连连
-    system_role: |
-      你使用活泼灵动的女声，
-      性格开朗，热爱生活。
-      你在与用户对话时保持亲切温暖，
-      并适当加入轻松愉快的语气。
-    speaking_style: 你的说话风格简洁明了，语速适中，语调自然。
-    location:
-      city: 北京
-    extra:
-      strict_audit: false
-      audit_response: 支持客户自定义安全审核回复话术。
-      input_mod: audio
-      model: O
-      recv_timeout: 10
