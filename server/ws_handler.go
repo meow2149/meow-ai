@@ -155,15 +155,39 @@ func (h *Handler) pipeFrontend(conn *websocket.Conn, session *voice.Session) err
 }
 
 func (h *Handler) pipeBackend(writer *wsWriter, session *voice.Session) error {
-	for data := range session.Audio() {
-		if len(data) == 0 {
-			continue
-		}
-		if err := writer.writeBinary(data); err != nil {
-			return err
+	// Handle both audio and events
+	for {
+		select {
+		case data, ok := <-session.Audio():
+			if !ok {
+				return session.Err() // Channel closed
+			}
+			if len(data) == 0 {
+				continue
+			}
+			if err := writer.writeBinary(data); err != nil {
+				return err
+			}
+		case evt, ok := <-session.Events():
+			if !ok {
+				return session.Err()
+			}
+			// Forward event to frontend
+			// Convert payload to RawMessage to avoid double encoding if it is already JSON bytes
+			// Actually `evt.Payload` is []byte, which will be base64 encoded if we put it in struct directly as []byte
+			// We want it to be a nested JSON object.
+			
+			jsonMsg := map[string]any{
+				"type":     evt.Type,
+				"event_id": evt.EventID,
+				"payload":  json.RawMessage(evt.Payload),
+			}
+			
+			if err := writer.writeJSON(jsonMsg); err != nil {
+				return err
+			}
 		}
 	}
-	return session.Err()
 }
 
 func (h *Handler) writeError(conn *websocket.Conn, err error) {

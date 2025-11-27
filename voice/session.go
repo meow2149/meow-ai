@@ -11,11 +11,18 @@ import (
 	"meow-ai/volc"
 )
 
+type EventMsg struct {
+	Type    string `json:"type"`
+	EventID int32  `json:"event_id"`
+	Payload []byte `json:"payload"` // Raw JSON payload
+}
+
 type Session struct {
 	client    *volc.Client
 	processor *PCMProcessor
 
 	audioCh chan []byte
+	eventCh chan EventMsg
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -48,6 +55,7 @@ func NewSession(parent context.Context, cfg *config.Config, format InputFormat) 
 		client:    client,
 		processor: processor,
 		audioCh:   make(chan []byte, 64),
+		eventCh:   make(chan EventMsg, 64),
 		ctx:       ctx,
 		cancel:    cancel,
 	}
@@ -60,6 +68,7 @@ func NewSession(parent context.Context, cfg *config.Config, format InputFormat) 
 func (s *Session) consume() {
 	defer s.wg.Done()
 	defer close(s.audioCh)
+	defer close(s.eventCh)
 
 	for {
 		select {
@@ -86,6 +95,21 @@ func (s *Session) consume() {
 				glog.Infof("doubao session closed event=%d", msg.Event)
 				return
 			}
+			// Forward relevant events to frontend
+			// Copy payload to be safe
+			payload := make([]byte, len(msg.Payload))
+			copy(payload, msg.Payload)
+
+			select {
+			case s.eventCh <- EventMsg{
+				Type:    "event",
+				EventID: msg.Event,
+				Payload: payload,
+			}:
+			default:
+				glog.Warningf("event channel full, dropping event %d", msg.Event)
+			}
+
 		case volc.MsgTypeError:
 			s.setError(fmt.Errorf("doubao error code=%d payload=%s", msg.ErrorCode, string(msg.Payload)))
 			return
@@ -109,6 +133,10 @@ func (s *Session) setError(err error) {
 
 func (s *Session) Audio() <-chan []byte {
 	return s.audioCh
+}
+
+func (s *Session) Events() <-chan EventMsg {
+	return s.eventCh
 }
 
 func (s *Session) PushAudio(frame []byte) error {

@@ -15,6 +15,8 @@ const workletURL = new URL("../worklets/pcm-processor.js", import.meta.url)
 const useRealtimeVoice = () => {
   const [status, setStatus] = useState<Status>("idle")
   const [info, setInfo] = useState("")
+  const [aiText, setAiText] = useState("")
+  const lastUpdateTimeRef = useRef(0) // 记录上次收到有效 AI 文本的时间
 
   const wsRef = useRef<WebSocket | null>(null)
   const mediaRef = useRef<MediaStream | null>(null)
@@ -63,6 +65,7 @@ const useRealtimeVoice = () => {
     if (status === "connecting" || status === "running") return
     setStatus("connecting")
     setInfo("")
+    setAiText("")
     try {
       const media = await navigator.mediaDevices.getUserMedia({ audio: true })
       const audioCtx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE })
@@ -99,6 +102,45 @@ const useRealtimeVoice = () => {
               setStatus("error")
               setInfo(msg.message ?? "发生未知错误")
               cleanup()
+            } else if (msg.type === "event") {
+              const payload = msg.payload
+
+              // 兼容多种可能的字段名
+              let text = ""
+              if (payload.content) text = payload.content
+              else if (payload.text) text = payload.text
+              else if (payload.result?.text) text = payload.result.text
+              else if (payload.display_text) text = payload.display_text
+
+              if (text && typeof text === "string" && text.trim().length > 0) {
+                const now = Date.now()
+                // Time-based Reset: 如果距离上次收到 AI 文本超过 3 秒，则视为新的一轮，清空旧文本
+                const isTimeReset = now - lastUpdateTimeRef.current > 3000
+                lastUpdateTimeRef.current = now
+
+                setAiText((prev) => {
+                  if (isTimeReset) {
+                    return text
+                  }
+
+                  // 1. 全量流式更新检测
+                  if (text.length > prev.length && text.startsWith(prev)) {
+                    return text
+                  }
+
+                  // 2. 增量追加
+                  if (!text.startsWith(prev)) {
+                    return prev + text
+                  }
+
+                  return text
+                })
+              }
+
+              // Event-based Reset: ASR Started
+              if (msg.event_id === 1000 || msg.event_id === 1001) {
+                setAiText("")
+              }
             }
           } catch (err) {
             console.error("parse message error", err)
@@ -167,6 +209,7 @@ const useRealtimeVoice = () => {
     start,
     stop,
     isRunning: status === "running",
+    aiText,
   }
 }
 
