@@ -12,11 +12,25 @@ const getBackendURL = () => {
 
 const workletURL = new URL("../worklets/pcm-processor.js", import.meta.url)
 
+const AI_TEXT_RESET_GAP = 3000
+
+type EventPayload = {
+  results?: Array<{
+    text?: string
+  }>
+  text?: string
+  extra?: {
+    origin_text?: string
+  }
+  content?: string
+}
+
 const useRealtimeVoice = () => {
   const [status, setStatus] = useState<Status>("idle")
   const [info, setInfo] = useState("")
   const [aiText, setAiText] = useState("")
-  const lastUpdateTimeRef = useRef(0) // 记录上次收到有效 AI 文本的时间
+  const [userText, setUserText] = useState("")
+  const lastUpdateTimeRef = useRef(0)
 
   const wsRef = useRef<WebSocket | null>(null)
   const mediaRef = useRef<MediaStream | null>(null)
@@ -61,11 +75,81 @@ const useRealtimeVoice = () => {
     playbackTimeRef.current = startAt + buffer.duration
   }, [])
 
+  const mergeAiText = useCallback((incoming?: string, strategy: "auto" | "append" = "auto") => {
+    if (typeof incoming !== "string" || !incoming.trim()) return
+    const now = Date.now()
+    const shouldReset = now - lastUpdateTimeRef.current > AI_TEXT_RESET_GAP
+    lastUpdateTimeRef.current = now
+
+    setAiText((prev) => {
+      if (!prev || shouldReset) {
+        return incoming
+      }
+
+      if (incoming.length >= prev.length && incoming.startsWith(prev)) {
+        return incoming
+      }
+
+      if (strategy === "append" || !incoming.startsWith(prev)) {
+        return prev + incoming
+      }
+
+      return incoming
+    })
+  }, [])
+
+  const handleUserTranscript = useCallback((payload?: EventPayload) => {
+    const result = payload?.results?.[0]
+    const transcript = result?.text ?? payload?.text ?? payload?.extra?.origin_text
+    if (!transcript) return
+    setUserText(transcript)
+  }, [])
+
+  const handleServerMessage = useCallback(
+    (raw: string) => {
+      try {
+        const msg = JSON.parse(raw)
+        if (msg.type === "ready") {
+          setStatus("running")
+          setInfo("")
+          return
+        }
+        if (msg.type === "error") {
+          setStatus("error")
+          setInfo(msg.message ?? "发生未知错误")
+          cleanup()
+          return
+        }
+        if (msg.type === "event") {
+          switch (msg.event_id) {
+            case 1000:
+            case 1001:
+              setAiText("")
+              setUserText("")
+              return
+            case 451:
+              handleUserTranscript(msg.payload)
+              return
+            case 550:
+              mergeAiText(msg.payload?.content, "append")
+              return
+            default:
+              mergeAiText(msg.payload?.text ?? msg.payload?.content)
+          }
+        }
+      } catch (err) {
+        console.error("parse message error", err)
+      }
+    },
+    [cleanup, handleUserTranscript, mergeAiText],
+  )
+
   const start = useCallback(async () => {
     if (status === "connecting" || status === "running") return
     setStatus("connecting")
     setInfo("")
     setAiText("")
+    setUserText("")
     try {
       const media = await navigator.mediaDevices.getUserMedia({ audio: true })
       const audioCtx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE })
@@ -93,58 +177,8 @@ const useRealtimeVoice = () => {
 
       ws.onmessage = (event) => {
         if (typeof event.data === "string") {
-          try {
-            const msg = JSON.parse(event.data)
-            if (msg.type === "ready") {
-              setStatus("running")
-              setInfo("")
-            } else if (msg.type === "error") {
-              setStatus("error")
-              setInfo(msg.message ?? "发生未知错误")
-              cleanup()
-            } else if (msg.type === "event") {
-              const payload = msg.payload
-
-              // 兼容多种可能的字段名
-              let text = ""
-              if (payload.content) text = payload.content
-              else if (payload.text) text = payload.text
-              else if (payload.result?.text) text = payload.result.text
-              else if (payload.display_text) text = payload.display_text
-
-              if (text && typeof text === "string" && text.trim().length > 0) {
-                const now = Date.now()
-                // Time-based Reset: 如果距离上次收到 AI 文本超过 3 秒，则视为新的一轮，清空旧文本
-                const isTimeReset = now - lastUpdateTimeRef.current > 3000
-                lastUpdateTimeRef.current = now
-
-                setAiText((prev) => {
-                  if (isTimeReset) {
-                    return text
-                  }
-
-                  // 1. 全量流式更新检测
-                  if (text.length > prev.length && text.startsWith(prev)) {
-                    return text
-                  }
-
-                  // 2. 增量追加
-                  if (!text.startsWith(prev)) {
-                    return prev + text
-                  }
-
-                  return text
-                })
-              }
-
-              // Event-based Reset: ASR Started
-              if (msg.event_id === 1000 || msg.event_id === 1001) {
-                setAiText("")
-              }
-            }
-          } catch (err) {
-            console.error("parse message error", err)
-          }
+          handleServerMessage(event.data)
+          console.log("event.data", event.data)
           return
         }
         handleServerAudio(event.data as ArrayBuffer).catch((err) => {
@@ -181,12 +215,14 @@ const useRealtimeVoice = () => {
       setStatus("error")
       setInfo("无法访问麦克风或建立连接")
     }
-  }, [cleanup, handleServerAudio, status])
+  }, [cleanup, handleServerAudio, handleServerMessage, status])
 
   const stop = useCallback(() => {
     if (!wsRef.current) {
       cleanup()
       setStatus("idle")
+      setUserText("")
+      setAiText("")
       return
     }
     if (wsRef.current.readyState === WebSocket.OPEN) {
@@ -195,6 +231,8 @@ const useRealtimeVoice = () => {
     wsRef.current.close()
     cleanup()
     setStatus("idle")
+    setUserText("")
+    setAiText("")
   }, [cleanup])
 
   useEffect(() => {
@@ -210,6 +248,7 @@ const useRealtimeVoice = () => {
     stop,
     isRunning: status === "running",
     aiText,
+    userText,
   }
 }
 
