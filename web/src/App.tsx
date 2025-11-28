@@ -1,9 +1,8 @@
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice"
 import { motion, AnimatePresence } from "motion/react"
-import { TypewriterText } from "@/components/TypewriterText"
 
 function App() {
-  const { start, stop, isRunning, aiText, userText } = useRealtimeVoice()
+  const { start, stop, isRunning, text } = useRealtimeVoice()
 
   const noiseTexture = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E")`
   const buttonPadding = isRunning
@@ -117,34 +116,18 @@ function App() {
               </motion.div>
             ) : (
               <motion.div
-                key="conversation"
-                initial={{ opacity: 0, y: 20, filter: "blur(14px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+                key="ai-text"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="flex w-full flex-col gap-6"
+                className="w-full text-center"
               >
-                <div className="rounded-3xl border border-white/60 bg-white/70 px-6 py-5 shadow-[0_20px_40px_-24px_rgba(87,65,40,0.35)] backdrop-blur">
-                  <p className="text-[0.65rem] font-semibold tracking-[0.25em] text-stone-400/80 uppercase">你</p>
-                  <div className="pt-3 text-left">
-                    {userText ? (
-                      <TypewriterText text={userText} />
-                    ) : (
-                      <span className="font-serif text-sm text-stone-400">说点什么吧，我在听。</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-orange-200/60 bg-linear-to-br from-orange-50/90 to-amber-50/70 px-6 py-5 shadow-[0_25px_60px_-26px_rgba(191,89,14,0.45)] backdrop-blur">
-                  <p className="text-[0.65rem] font-semibold tracking-[0.25em] text-orange-400 uppercase">连连</p>
-                  <div className="pt-3 text-left">
-                    {aiText ? (
-                      <TypewriterText text={aiText} />
-                    ) : (
-                      <span className="font-serif text-sm text-orange-400/80">稍等，连连正在组织语言...</span>
-                    )}
-                  </div>
-                </div>
+                {text ? (
+                  <span className="font-serif text-lg leading-relaxed font-medium tracking-wide text-stone-600/90">
+                    {text}
+                  </span>
+                ) : null}
               </motion.div>
             )}
           </AnimatePresence>

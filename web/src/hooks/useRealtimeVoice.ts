@@ -12,25 +12,10 @@ const getBackendURL = () => {
 
 const workletURL = new URL("../worklets/pcm-processor.js", import.meta.url)
 
-const AI_TEXT_RESET_GAP = 3000
-
-type EventPayload = {
-  results?: Array<{
-    text?: string
-  }>
-  text?: string
-  extra?: {
-    origin_text?: string
-  }
-  content?: string
-}
-
 const useRealtimeVoice = () => {
   const [status, setStatus] = useState<Status>("idle")
-  const [info, setInfo] = useState("")
-  const [aiText, setAiText] = useState("")
-  const [userText, setUserText] = useState("")
-  const lastUpdateTimeRef = useRef(0)
+  const [text, setText] = useState("")
+  const textBufferRef = useRef("")
 
   const wsRef = useRef<WebSocket | null>(null)
   const mediaRef = useRef<MediaStream | null>(null)
@@ -75,81 +60,71 @@ const useRealtimeVoice = () => {
     playbackTimeRef.current = startAt + buffer.duration
   }, [])
 
-  const mergeAiText = useCallback((incoming?: string, strategy: "auto" | "append" = "auto") => {
-    if (typeof incoming !== "string" || !incoming.trim()) return
-    const now = Date.now()
-    const shouldReset = now - lastUpdateTimeRef.current > AI_TEXT_RESET_GAP
-    lastUpdateTimeRef.current = now
-
-    setAiText((prev) => {
-      if (!prev || shouldReset) {
-        return incoming
-      }
-
-      if (incoming.length >= prev.length && incoming.startsWith(prev)) {
-        return incoming
-      }
-
-      if (strategy === "append" || !incoming.startsWith(prev)) {
-        return prev + incoming
-      }
-
-      return incoming
-    })
+  const bufferText = useCallback((incoming?: string) => {
+    if (!incoming) return
+    textBufferRef.current += incoming
+    setText(textBufferRef.current)
   }, [])
 
-  const handleUserTranscript = useCallback((payload?: EventPayload) => {
-    const result = payload?.results?.[0]
-    const transcript = result?.text ?? payload?.text ?? payload?.extra?.origin_text
-    if (!transcript) return
-    setUserText(transcript)
+  const resetText = useCallback(() => {
+    textBufferRef.current = ""
+    setText("")
   }, [])
 
   const handleServerMessage = useCallback(
     (raw: string) => {
-      try {
-        const msg = JSON.parse(raw)
-        if (msg.type === "ready") {
-          setStatus("running")
-          setInfo("")
-          return
-        }
-        if (msg.type === "error") {
-          setStatus("error")
-          setInfo(msg.message ?? "发生未知错误")
-          cleanup()
-          return
-        }
-        if (msg.type === "event") {
-          switch (msg.event_id) {
-            case 1000:
-            case 1001:
-              setAiText("")
-              setUserText("")
-              return
-            case 451:
-              handleUserTranscript(msg.payload)
-              return
-            case 550:
-              mergeAiText(msg.payload?.content, "append")
-              return
-            default:
-              mergeAiText(msg.payload?.text ?? msg.payload?.content)
+      const msg = JSON.parse(raw)
+
+      if (msg.type === "ready") {
+        setStatus("running")
+        return
+      }
+      if (msg.type === "error") {
+        setStatus("error")
+        cleanup()
+        return
+      }
+      if (msg.type === "event") {
+        switch (msg.event_id) {
+          case 1000:
+          case 1001: {
+            resetText()
+            return
+          }
+          case 350: {
+            // TTS 开始：重置并设置初始文本（如果有）
+            resetText()
+            if (msg.payload?.text) {
+              textBufferRef.current = msg.payload.text
+              setText(msg.payload.text)
+            }
+            return
+          }
+          case 351: {
+            // TTS 句子结束：如果有 text 则显示
+            if (msg.payload?.text) {
+              textBufferRef.current = msg.payload.text
+              setText(msg.payload.text)
+            }
+            return
+          }
+          case 550: {
+            // AI 回复文本：累积流式文本并实时更新
+            if (msg.payload?.content) {
+              bufferText(msg.payload.content)
+            }
+            return
           }
         }
-      } catch (err) {
-        console.error("parse message error", err)
       }
     },
-    [cleanup, handleUserTranscript, mergeAiText],
+    [cleanup, bufferText, resetText],
   )
 
   const start = useCallback(async () => {
     if (status === "connecting" || status === "running") return
     setStatus("connecting")
-    setInfo("")
-    setAiText("")
-    setUserText("")
+    resetText()
     try {
       const media = await navigator.mediaDevices.getUserMedia({ audio: true })
       const audioCtx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE })
@@ -180,14 +155,11 @@ const useRealtimeVoice = () => {
           handleServerMessage(event.data)
           return
         }
-        handleServerAudio(event.data as ArrayBuffer).catch((err) => {
-          console.error("playback error", err)
-        })
+        handleServerAudio(event.data as ArrayBuffer)
       }
 
       ws.onerror = () => {
         setStatus("error")
-        setInfo("WebSocket 连接失败")
         cleanup()
       }
 
@@ -199,7 +171,7 @@ const useRealtimeVoice = () => {
       worklet.port.onmessage = (event) => {
         if (ws.readyState !== WebSocket.OPEN) return
         const chunk = event.data as Float32Array
-        if (!chunk?.length) return
+        if (!chunk.length) return
         const copy = chunk.slice()
         ws.send(copy.buffer)
       }
@@ -208,20 +180,17 @@ const useRealtimeVoice = () => {
       mediaRef.current = media
       audioCtxRef.current = audioCtx
       workletRef.current = worklet
-    } catch (err) {
-      console.error(err)
+    } catch {
       cleanup()
       setStatus("error")
-      setInfo("无法访问麦克风或建立连接")
     }
-  }, [cleanup, handleServerAudio, handleServerMessage, status])
+  }, [cleanup, handleServerAudio, handleServerMessage, status, resetText])
 
   const stop = useCallback(() => {
     if (!wsRef.current) {
       cleanup()
       setStatus("idle")
-      setUserText("")
-      setAiText("")
+      resetText()
       return
     }
     if (wsRef.current.readyState === WebSocket.OPEN) {
@@ -230,9 +199,8 @@ const useRealtimeVoice = () => {
     wsRef.current.close()
     cleanup()
     setStatus("idle")
-    setUserText("")
-    setAiText("")
-  }, [cleanup])
+    resetText()
+  }, [cleanup, resetText])
 
   useEffect(() => {
     return () => {
@@ -242,12 +210,10 @@ const useRealtimeVoice = () => {
 
   return {
     status,
-    info,
     start,
     stop,
     isRunning: status === "running",
-    aiText,
-    userText,
+    text,
   }
 }
 
