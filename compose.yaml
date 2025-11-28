@@ -1,10 +1,8 @@
 services:
   api:
-    image: meow-ai-api:latest
+    image: meow2149/meow-ai:api-latest
     container_name: meow-ai-api
-    build:
-      context: .
-      target: api-runtime
+    pull_policy: always
     restart: unless-stopped
     volumes:
       - ./config.yaml:/config/config.yaml:ro
@@ -14,16 +12,30 @@ services:
       - "8080"
 
   web:
-    image: meow-ai-web:latest
+    image: meow2149/meow-ai:web-latest
     container_name: meow-ai-web
-    build:
-      context: .
-      target: web-runtime
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       - api
     ports:
       - "80:80"
+    networks:
+      - app
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: meow-ai-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    command:
+      - meow-ai-api
+      - meow-ai-web
     networks:
       - app
 

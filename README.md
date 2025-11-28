@@ -4,51 +4,51 @@ Meow-AI is an intelligent real-time voice companion designed to provide empathet
 
 ## Local Development
 
+For local development, run the backend with Go directly and use pnpm dev server for the frontend:
+
+```bash
+# Start backend (in project root)
+go run .
+
+# Start frontend (in web directory)
+cd web
+pnpm install
+pnpm dev
+```
+
+## Release Workflow
+
+Build Docker images and push to Docker Hub:
+
 ```bash
 # 1. Build frontend assets
 cd web
 pnpm install
 pnpm run build
 
-# 2. Build and start services
-cd ..
-docker compose up -d --build
-```
-
-## Release Workflow
-
-```bash
-# 1. Build frontend
-cd web
-pnpm install
-pnpm run build
-
 # 2. Build Docker images
 cd ..
-docker compose build
+docker compose -f compose.dev.yaml build
 
 # 3. Tag images
 docker tag meow-ai-api:latest meow2149/meow-ai:api-latest
 docker tag meow-ai-web:latest meow2149/meow-ai:web-latest
 
-# 4. Push to registry
+# 4. Push to Docker Hub
 docker push meow2149/meow-ai:api-latest
 docker push meow2149/meow-ai:web-latest
 ```
 
 ## Production Deployment
 
+Deploy on production server:
+
 ```bash
-# 1. Prepare configuration
-# Copy config.yaml, compose.yaml, and compose.prod.yaml to the server
+# 1. Prepare configuration files
+# Copy config.yaml and compose.yaml to the server
 
-# 2. Authenticate
-docker login -u meow2149
-
-# 3. Configure environment
-export MEOW_AI_API_IMAGE=meow2149/meow-ai:api-latest
-export MEOW_AI_WEB_IMAGE=meow2149/meow-ai:web-latest
-
-# 4. Launch services
-docker compose -f compose.yaml -f compose.prod.yaml up -d
+# 2. Start services
+docker compose up -d
 ```
+
+Services will automatically pull the latest public images from Docker Hub and start. Watchtower will automatically monitor and update containers.
