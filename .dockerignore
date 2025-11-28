@@ -1,0 +1,16 @@
+web/*
+!web/dist
+
+.git
+.gitignore
+.gitattributes
+
+compose.yaml
+compose.dev.yaml
+
+Dockerfile
+.dockerignore
+
+README.md
+
+config.yaml
