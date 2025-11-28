@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	readTimeout  = 30 * time.Second
+	readTimeout  = 0 * time.Second
 	writeTimeout = 5 * time.Second
 )
 
@@ -250,7 +250,11 @@ func (c *Client) SendAudio(ctx context.Context, pcm []byte) error {
 
 func (c *Client) readMessage(ctx context.Context) (*Message, error) {
 	if ctx != nil {
-		_ = c.conn.SetReadDeadline(time.Now().Add(readTimeout))
+		if readTimeout > 0 {
+			_ = c.conn.SetReadDeadline(time.Now().Add(readTimeout))
+		} else {
+			_ = c.conn.SetReadDeadline(time.Time{})
+		}
 	}
 	mt, frame, err := c.conn.ReadMessage()
 	if err != nil {
