@@ -178,7 +178,6 @@ const useRealtimeVoice = () => {
       ws.onmessage = (event) => {
         if (typeof event.data === "string") {
           handleServerMessage(event.data)
-          console.log("event.data", event.data)
           return
         }
         handleServerAudio(event.data as ArrayBuffer).catch((err) => {
