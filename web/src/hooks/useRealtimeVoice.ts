@@ -23,8 +23,22 @@ const useRealtimeVoice = () => {
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const playbackCtxRef = useRef<AudioContext | null>(null)
   const playbackTimeRef = useRef(0)
+  const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set())
+
+  const stopAllAudio = useCallback(() => {
+    // 停止所有正在播放的音频源
+    activeSourcesRef.current.forEach((source) => {
+      source.stop()
+    })
+    activeSourcesRef.current.clear()
+    // 重置播放时间，以便新音频可以立即开始
+    if (playbackCtxRef.current) {
+      playbackTimeRef.current = playbackCtxRef.current.currentTime
+    }
+  }, [])
 
   const cleanup = useCallback(() => {
+    stopAllAudio()
     wsRef.current?.close()
     wsRef.current = null
     workletRef.current?.disconnect()
@@ -36,7 +50,7 @@ const useRealtimeVoice = () => {
     playbackCtxRef.current?.close()
     playbackCtxRef.current = null
     playbackTimeRef.current = 0
-  }, [])
+  }, [stopAllAudio])
 
   const handleServerAudio = useCallback(async (payload: ArrayBuffer) => {
     if (!payload.byteLength) return
@@ -55,13 +69,21 @@ const useRealtimeVoice = () => {
     const source = ctx.createBufferSource()
     source.buffer = buffer
     source.connect(ctx.destination)
+
+    // 将音频源添加到活动集合中
+    activeSourcesRef.current.add(source)
+
+    // 当音频播放结束时，从集合中移除
+    source.onended = () => {
+      activeSourcesRef.current.delete(source)
+    }
+
     const startAt = Math.max(playbackTimeRef.current, ctx.currentTime)
     source.start(startAt)
     playbackTimeRef.current = startAt + buffer.duration
   }, [])
 
-  const bufferText = useCallback((incoming?: string) => {
-    if (!incoming) return
+  const bufferText = useCallback((incoming: string) => {
     textBufferRef.current += incoming
     setText(textBufferRef.current)
   }, [])
@@ -73,52 +95,68 @@ const useRealtimeVoice = () => {
 
   const handleServerMessage = useCallback(
     (raw: string) => {
-      const msg = JSON.parse(raw)
+      const message = JSON.parse(raw)
 
-      if (msg.type === "ready") {
+      if (message.type === "ready") {
         setStatus("running")
         return
       }
-      if (msg.type === "error") {
+      if (message.type === "error") {
         setStatus("error")
         cleanup()
         return
       }
-      if (msg.type === "event") {
-        switch (msg.event_id) {
-          case 1000:
-          case 1001: {
-            resetText()
+      if (message.type === "event") {
+        switch (message.event_id) {
+          case 154: {
+            // 每一轮交互对应的用量信息
             return
           }
           case 350: {
-            // TTS 开始：重置并设置初始文本（如果有）
+            // 合成音频的起始事件
+            stopAllAudio()
             resetText()
-            if (msg.payload?.text) {
-              textBufferRef.current = msg.payload.text
-              setText(msg.payload.text)
+            const text = message.payload.text
+            if (text) {
+              textBufferRef.current = text
+              setText(text)
             }
             return
           }
           case 351: {
-            // TTS 句子结束：如果有 text 则显示
-            if (msg.payload?.text) {
-              textBufferRef.current = msg.payload.text
-              setText(msg.payload.text)
-            }
+            // 合成音频的分句结束事件
+            return
+          }
+          case 359: {
+            // 模型一轮音频合成结束事件
+            return
+          }
+          case 450: {
+            // 模型识别出音频流中的首字返回的事件，用于打断客户端的播报
+            stopAllAudio()
+            return
+          }
+          case 451: {
+            // 模型识别出用户说话的文本内容
+            return
+          }
+          case 459: {
+            // 模型认为用户说话结束的事件
             return
           }
           case 550: {
-            // AI 回复文本：累积流式文本并实时更新
-            if (msg.payload?.content) {
-              bufferText(msg.payload.content)
-            }
+            // 模型回复的文本内容
+            bufferText(message.payload.content)
+            return
+          }
+          case 559: {
+            // 模型回复文本结束事件
             return
           }
         }
       }
     },
-    [cleanup, bufferText, resetText],
+    [cleanup, bufferText, resetText, stopAllAudio],
   )
 
   const start = useCallback(async () => {
