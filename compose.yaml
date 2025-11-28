@@ -24,8 +24,9 @@ services:
       - app
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: nickfedor/watchtower:latest
     container_name: meow-ai-watchtower
+    pull_policy: always
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
