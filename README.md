@@ -16,6 +16,23 @@ pnpm install
 pnpm dev
 ```
 
+## Local Deployment
+
+For local deployment using Docker Compose (useful when you don't have Go/Node.js environments or need to test with additional services like databases):
+
+```bash
+# 1. Build frontend assets
+cd web
+pnpm install
+pnpm build
+
+# 2. Start services with Docker Compose
+cd ..
+docker compose -f compose.dev.yaml up -d
+```
+
+The services will build Docker images locally and start containers. The web interface will be available at `http://localhost`.
+
 ## Release Workflow
 
 Build Docker images and push to Docker Hub:
@@ -24,7 +41,7 @@ Build Docker images and push to Docker Hub:
 # 1. Build frontend assets
 cd web
 pnpm install
-pnpm run build
+pnpm build
 
 # 2. Build Docker images
 cd ..
