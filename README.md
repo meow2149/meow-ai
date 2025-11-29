@@ -61,10 +61,12 @@ docker push meow2149/meow-ai:web-latest
 Deploy on production server:
 
 ```bash
-# 1. Prepare configuration files
+# 1. Configure domain on Cloudflare and enable proxy
+
+# 2. Prepare configuration files
 # Copy config.yaml and compose.yaml to the server
 
-# 2. Start services
+# 3. Start services
 docker compose up -d
 ```
 
