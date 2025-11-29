@@ -18,7 +18,7 @@ pnpm dev
 
 ## Local Deployment
 
-For local deployment using Docker Compose (useful when you don't have Go/Node.js environments or need to test with additional services like databases):
+For local deployment using Docker Compose:
 
 ```bash
 # 1. Build frontend assets
