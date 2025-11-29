@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { fileURLToPath, URL } from "node:url"
 
-export default defineConfig({
+const config = defineConfig({
   plugins: [
     react({
       babel: {
@@ -27,3 +27,5 @@ export default defineConfig({
     },
   },
 })
+
+export default config
