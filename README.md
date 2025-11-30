@@ -8,6 +8,7 @@ For local development, run the backend with Go directly and use pnpm dev server 
 
 ```bash
 # Start backend (in project root)
+go mod download
 go run .
 
 # Start frontend (in web directory)
