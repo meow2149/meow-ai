@@ -2,6 +2,11 @@
 
 Meow-AI is an intelligent real-time voice companion designed to provide empathetic listening and emotional support. It creates a safe, judgment-free space for users to share their thoughts and feelings, serving as a supportive partner for mental well-being.
 
+## Doubao Realtime Speech API
+
+Realtime voice is powered by Volcengine Doubao end-to-end speech model.  
+Docs: [Doubao End-to-End Realtime Speech API](https://www.volcengine.com/docs/6561/1594360?lang=zh).
+
 ## Local Development
 
 For local development, run the backend with Go directly and use pnpm dev server for the frontend:
