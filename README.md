@@ -77,3 +77,7 @@ docker compose up -d
 ```
 
 Services will automatically pull the latest public images from Docker Hub and start. Watchtower will automatically monitor and update containers.
+
+### License
+
+Meow-AI is [MIT licensed](./LICENSE).
