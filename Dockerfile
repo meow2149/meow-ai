@@ -12,7 +12,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /out/meow
 # --- Go API runtime stage -----------------------------------------------------
 FROM gcr.io/distroless/base-debian12:nonroot AS api-runtime
 
-ENV CONFIG_PATH=/config/config.yaml
 WORKDIR /app
 
 COPY --from=api-builder /out/meow-ai /usr/local/bin/meow-ai
@@ -20,7 +19,6 @@ COPY --from=api-builder /out/meow-ai /usr/local/bin/meow-ai
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/meow-ai"]
-CMD ["-config", "/config/config.yaml"]
 
 # --- Nginx runtime stage ------------------------------------------------------
 FROM nginx:1.27-alpine AS web-runtime
