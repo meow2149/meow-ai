@@ -14,13 +14,11 @@ import (
 	"meow-ai/server"
 )
 
-var configPath = flag.String("config", "config.yaml", "配置文件路径")
-
 func main() {
 	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 
-	cfg := config.MustLoad(*configPath)
+	cfg := config.MustLoad("config.yaml")
 	handler := server.NewHandler(cfg)
 
 	mux := http.NewServeMux()

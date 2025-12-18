@@ -24,10 +24,7 @@ const (
 	eventUserQuery        int32 = 200
 )
 
-var (
-	readTimeout  = 0 * time.Second
-	writeTimeout = 5 * time.Second
-)
+const writeTimeout = 5 * time.Second
 
 type Client struct {
 	cfg       *config.Config
@@ -248,14 +245,8 @@ func (c *Client) SendAudio(ctx context.Context, pcm []byte) error {
 	return c.writeMessage(ctx, msg, SerializationRaw)
 }
 
-func (c *Client) readMessage(ctx context.Context) (*Message, error) {
-	if ctx != nil {
-		if readTimeout > 0 {
-			_ = c.conn.SetReadDeadline(time.Now().Add(readTimeout))
-		} else {
-			_ = c.conn.SetReadDeadline(time.Time{})
-		}
-	}
+func (c *Client) readMessage(_ context.Context) (*Message, error) {
+	_ = c.conn.SetReadDeadline(time.Time{})
 	mt, frame, err := c.conn.ReadMessage()
 	if err != nil {
 		return nil, err
@@ -291,7 +282,7 @@ func (c *Client) ReadLoop(ctx context.Context, fn func(*Message) error) error {
 	}
 }
 
-func (c *Client) writeMessage(ctx context.Context, msg *Message, serialization SerializationBits) error {
+func (c *Client) writeMessage(_ context.Context, msg *Message, serialization SerializationBits) error {
 	proto := c.jsonProto
 	if serialization == SerializationRaw {
 		proto = c.rawProto
@@ -300,9 +291,7 @@ func (c *Client) writeMessage(ctx context.Context, msg *Message, serialization S
 	if err != nil {
 		return err
 	}
-	if ctx != nil {
-		_ = c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-	}
+	_ = c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 	c.sendMu.Lock()
 	defer c.sendMu.Unlock()
 	return c.conn.WriteMessage(websocket.BinaryMessage, frame)

@@ -150,9 +150,6 @@ func (h *Handler) pipeFrontend(conn *websocket.Conn, session *voice.Session) err
 			if msg.Type == "stop" {
 				return nil
 			}
-		case websocket.PingMessage, websocket.PongMessage:
-			// Gorilla websocket handles ping/pong automatically, but explicit handling ensures activity
-			continue
 		default:
 			glog.Infof("ignore message type=%d", mt)
 		}
@@ -177,13 +174,13 @@ func (h *Handler) pipeBackend(writer *wsWriter, session *voice.Session) error {
 			if !ok {
 				return session.Err()
 			}
-			
+
 			jsonMsg := map[string]any{
 				"type":     evt.Type,
 				"event_id": evt.EventID,
 				"payload":  json.RawMessage(evt.Payload),
 			}
-			
+
 			if err := writer.writeJSON(jsonMsg); err != nil {
 				return err
 			}
