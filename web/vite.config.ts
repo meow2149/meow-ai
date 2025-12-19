@@ -12,15 +12,6 @@ const config = defineConfig({
     }),
     tailwindcss(),
   ],
-  server: {
-    proxy: {
-      "/ws": {
-        target: "http://127.0.0.1:8080",
-        changeOrigin: true,
-        ws: true,
-      },
-    },
-  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

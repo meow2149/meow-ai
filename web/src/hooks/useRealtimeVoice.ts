@@ -6,6 +6,9 @@ const WS_PATH = "/ws/realtime"
 const DEFAULT_SAMPLE_RATE = 48000
 
 const getBackendURL = () => {
+  if (import.meta.env.DEV) {
+    return `ws://127.0.0.1:8080${WS_PATH}`
+  }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
   return `${protocol}//${window.location.host}${WS_PATH}`
 }
