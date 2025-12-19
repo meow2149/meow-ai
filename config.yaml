@@ -4,10 +4,10 @@ server:
 
 api:
   url: wss://openspeech.bytedance.com/api/v3/realtime/dialogue
-  app_id: 4363617129
+  app_id: 6405083420
   app_key: PlgvMymc7f3tQnJ6
   resource_id: volc.speech.dialog
-  access_key: rqA8NFo5SN4M5EYUYaDKcc1tMxpNLb6d
+  access_key: sCI_bUWI3wKlZpOrmoaVEFQVRj5oCKcD
 
 session:
   asr:
