@@ -4,12 +4,14 @@ Meow-AI is an intelligent real-time voice companion designed to provide empathet
 
 ## Doubao Realtime Speech API
 
-Realtime voice is powered by Volcengine Doubao end-to-end speech model.  
-Docs: [Doubao End-to-End Realtime Speech API](https://www.volcengine.com/docs/6561/1594360?lang=zh).
+> [!NOTE]
+> Realtime voice is powered by Volcengine Doubao end-to-end speech model.  
+> Docs: [Doubao End-to-End Realtime Speech API](https://www.volcengine.com/docs/6561/1594360?lang=zh).
 
 ## Local Development
 
-For local development, run the backend with Go directly and use pnpm dev server for the frontend:
+> [!TIP]
+> For local development, run the backend with Go directly and use pnpm dev server for the frontend.
 
 ```bash
 # Start backend (in project root)
