@@ -44,7 +44,7 @@ session:
       volc_websearch_result_count: 10
       volc_websearch_no_result_message: 我暂时没找到有帮助的资料，但我愿意继续听你说，也可以陪你一起想想还能尝试些什么。
       input_mod: audio
-      model: O
+      model: "1.2.1.0"
       recv_timeout: 10
   tts:
     speaker: zh_female_vv_jupiter_bigtts
