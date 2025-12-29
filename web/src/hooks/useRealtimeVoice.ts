@@ -119,15 +119,15 @@ const useRealtimeVoice = () => {
             // 合成音频的起始事件
             stopAllAudio()
             resetText()
+            return
+          }
+          case 351: {
+            // 合成音频的分句结束事件
             const text = message.payload.text
             if (text) {
               textBufferRef.current = text
               setText(text)
             }
-            return
-          }
-          case 351: {
-            // 合成音频的分句结束事件
             return
           }
           case 359: {
