@@ -8,6 +8,19 @@ Meow-AI is an intelligent real-time voice companion designed to provide empathet
 > Realtime voice is powered by Volcengine Doubao end-to-end speech model.  
 > Docs: [Doubao End-to-End Realtime Speech API](https://www.volcengine.com/docs/6561/1594360?lang=zh).
 
+## Configuration
+
+Before running the project, configure `config.yaml` with your Volcengine credentials:
+
+```yaml
+api:
+  url: wss://openspeech.bytedance.com/api/v3/realtime/dialogue
+  app_id: YOUR_APP_ID        # Your APP ID from Volcengine console
+  app_key: PlgvMymc7f3tQnJ6
+  resource_id: volc.speech.dialog
+  access_key: YOUR_ACCESS_TOKEN  # Your Access Token from Volcengine console
+```
+
 ## Local Development
 
 > [!TIP]
